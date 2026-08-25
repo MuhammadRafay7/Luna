@@ -43,3 +43,14 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Luna's persistent memory / state — never publish
+data/
+**/data/state.db*
+**/data/sessions/
+**/data/SOUL.md
+**/data/auth.json
+**/data/.env
+memory/
+*.sqlite
+*.sqlite3

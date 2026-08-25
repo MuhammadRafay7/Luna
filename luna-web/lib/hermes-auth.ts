@@ -21,7 +21,7 @@ function envFromFile(key: string): string | undefined {
     resolve(process.cwd(), ".env"),
   ]) {
     try {
-      for (const line of readFileSync(candidate, "utf8").split("\n")) {
+      for (const line of readFileSync(/*turbopackIgnore: true*/ candidate, "utf8").split("\n")) {
         if (line.startsWith(`${key}=`)) return line.slice(key.length + 1).trim();
       }
     } catch {
@@ -88,4 +88,27 @@ export async function mintTicket(): Promise<string> {
 /** Browser-reachable WebSocket origin, derived from the HTTP base URL. */
 export function wsBase(): string {
   return HERMES_URL.replace(/^http/, "ws");
+}
+
+/**
+ * Authenticated JSON call against the Hermes dashboard REST API,
+ * re-authenticating once if the cached session lapsed.
+ */
+export async function hermesFetch(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const call = async (cookie: string) =>
+    fetch(`${HERMES_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify(body),
+    });
+
+  let res = await call(cachedCookie ?? (await login()));
+  if (res.status === 401 || res.status === 403) {
+    cachedCookie = null;
+    res = await call(await login());
+  }
+  return res;
 }

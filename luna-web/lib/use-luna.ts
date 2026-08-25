@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getLunaClient, type ConnectionStatus, type LunaEvent } from "./luna-client";
+import {
+  getLunaClient,
+  type ConnectionStatus,
+  type LunaEvent,
+} from "./luna-client";
 import type { Message, SessionSummary, ToolCall, Usage } from "./types";
 
 /** Delta frames carry their text under one of a few keys depending on source. */
@@ -44,6 +48,7 @@ export function useLuna() {
 
   // The assistant message currently being streamed into.
   const activeRef = useRef<string | null>(null);
+  const sessionsChangedDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const patchActive = useCallback((fn: (m: Message) => Message) => {
     const id = activeRef.current;
@@ -97,11 +102,15 @@ export function useLuna() {
         case "message.complete": {
           ensureActive();
           const finalText = typeof p.text === "string" ? p.text : undefined;
-          const reasoning = typeof p.reasoning === "string" ? p.reasoning : undefined;
+          const reasoning =
+            typeof p.reasoning === "string" ? p.reasoning : undefined;
           patchActive((m) => ({
             ...m,
             // Prefer the authoritative final text when the server sends it.
-            text: finalText && finalText.length >= m.text.length ? finalText : m.text,
+            text:
+              finalText && finalText.length >= m.text.length
+                ? finalText
+                : m.text,
             reasoning: reasoning ?? m.reasoning,
             usage: toUsage(p.usage) ?? m.usage,
             streaming: false,
@@ -139,9 +148,13 @@ export function useLuna() {
                     status: failed ? "error" : "done",
                     durationS: Number(p.duration_s) || undefined,
                     output:
-                      typeof result.output === "string" ? result.output : undefined,
+                      typeof result.output === "string"
+                        ? result.output
+                        : undefined,
                     exitCode:
-                      result.exit_code == null ? undefined : Number(result.exit_code),
+                      result.exit_code == null
+                        ? undefined
+                        : Number(result.exit_code),
                     error: typeof result.error === "string" ? result.error : null,
                   }
                 : t,
@@ -184,13 +197,20 @@ export function useLuna() {
           const title = typeof p.title === "string" ? p.title : "";
           if (!title) break;
           setSessions((prev) =>
-            prev.map((s) => (s.id === (p.session_id ?? storedId) ? { ...s, title } : s)),
+            prev.map((s) =>
+              s.id === (p.session_id ?? storedId) ? { ...s, title } : s,
+            ),
           );
           break;
         }
 
         case "sessions.changed":
-          void refreshSessions();
+          if (sessionsChangedDebounceTimer.current) {
+            clearTimeout(sessionsChangedDebounceTimer.current);
+          }
+          sessionsChangedDebounceTimer.current = setTimeout(() => {
+            void refreshSessions();
+          }, 300);
           break;
       }
     });
@@ -198,6 +218,9 @@ export function useLuna() {
     return () => {
       offStatus();
       offEvent();
+      if (sessionsChangedDebounceTimer.current) {
+        clearTimeout(sessionsChangedDebounceTimer.current);
+      }
     };
     // refreshSessions is stable via useCallback below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,7 +229,10 @@ export function useLuna() {
   // ---- actions ------------------------------------------------------------
   const refreshSessions = useCallback(async () => {
     try {
-      const res = await client.rpc<{ sessions?: unknown[] }>("session.list", {});
+      const res = await client.rpc<{ sessions?: unknown[] }>(
+        "session.list",
+        {},
+      );
       const list = (res.sessions ?? []).map((raw) => {
         const s = raw as Record<string, unknown>;
         const title = String(s.title ?? "").trim();
@@ -214,16 +240,17 @@ export function useLuna() {
         return {
           id: String(s.id),
           // Server titles are model-generated and sometimes junk ("**", "```json").
-          title: title.length > 2 && !/^[`*\s)]+$/.test(title)
-            ? title
-            : preview.slice(0, 60) || "New chat",
+          title:
+            title.length > 2 && !/^[`*\s)]+$/.test(title)
+              ? title
+              : preview.slice(0, 60) || "New chat",
           updatedAt: Number(s.started_at) || undefined,
           messageCount: Number(s.message_count) || undefined,
         } satisfies SessionSummary;
       });
       setSessions(list);
     } catch {
-      // A failed list refresh is not worth interrupting the chat for.
+      // Ignored
     }
   }, [client]);
 
@@ -288,7 +315,12 @@ export function useLuna() {
           if (role === "assistant") pendingTools = [];
         }
         if (pendingTools.length) {
-          out.push({ id: nextId(), role: "assistant", text: "", tools: pendingTools });
+          out.push({
+            id: nextId(),
+            role: "assistant",
+            text: "",
+            tools: pendingTools,
+          });
         }
         setMessages(out);
       } catch (err) {
@@ -335,6 +367,19 @@ export function useLuna() {
     [busy, client, sessionId],
   );
 
+  /** Upload an image into the session; the next prompt.submit picks it up. */
+  const attachImage = useCallback(
+    async (dataUrl: string) => {
+      if (!sessionId) return;
+      await client.rpc("image.attach_bytes", {
+        session_id: sessionId,
+        content_base64: dataUrl,
+        filename: `capture-${Date.now()}.jpg`,
+      });
+    },
+    [client, sessionId],
+  );
+
   const interrupt = useCallback(async () => {
     if (!sessionId) return;
     try {
@@ -353,7 +398,7 @@ export function useLuna() {
         if (stored === storedId) await newChat();
         void refreshSessions();
       } catch {
-        // Leave the row in place if the server refused the delete.
+        // Leave row in place
       }
     },
     [client, newChat, refreshSessions, storedId],
@@ -370,7 +415,9 @@ export function useLuna() {
         await newChat();
       } catch (err) {
         if (!cancelled) {
-          setFatal(err instanceof Error ? err.message : "Could not connect to Luna.");
+          setFatal(
+            err instanceof Error ? err.message : "Could not connect to Luna.",
+          );
         }
       }
     })();
@@ -389,6 +436,7 @@ export function useLuna() {
     busy,
     statusLine,
     send,
+    attachImage,
     interrupt,
     newChat,
     openSession,

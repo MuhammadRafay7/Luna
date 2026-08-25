@@ -6,8 +6,7 @@
  * Wire protocol (from tui_gateway/ws.py): newline-delimited JSON-RPC in both
  * directions. The server emits a `gateway.ready` event on accept, then
  * responses keyed by request id and `method: "event"` frames for everything
- * streaming. Per-token frames are coalesced server-side, so a single
- * `message.delta` may carry several tokens' worth of text.
+ * streaming.
  */
 
 export type LunaEvent = { type: string; payload: Record<string, unknown> };
@@ -18,6 +17,8 @@ type Pending = {
 };
 
 const RPC_TIMEOUT_MS = 120_000;
+const INITIAL_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 15000;
 
 export class LunaClient {
   private ws: WebSocket | null = null;
@@ -27,6 +28,8 @@ export class LunaClient {
   private statusListeners = new Set<(s: ConnectionStatus) => void>();
   private connecting: Promise<void> | null = null;
   private closedByUs = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
 
   status: ConnectionStatus = "idle";
 
@@ -49,6 +52,11 @@ export class LunaClient {
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return;
     if (this.connecting) return this.connecting;
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     this.closedByUs = false;
     this.setStatus("connecting");
@@ -78,11 +86,15 @@ export class LunaClient {
         ws.addEventListener("open", () => {
           ws.removeEventListener("close", onFail);
           ws.removeEventListener("error", onFail);
+          this.reconnectDelay = INITIAL_RECONNECT_DELAY_MS;
           this.setStatus("open");
 
           ws.addEventListener("close", () => {
             this.failAllPending("Connection to Luna closed.");
             this.setStatus(this.closedByUs ? "idle" : "closed");
+            if (!this.closedByUs) {
+              this.scheduleReconnect();
+            }
           });
 
           resolve();
@@ -94,14 +106,30 @@ export class LunaClient {
       await this.connecting;
     } catch (err) {
       this.setStatus("error");
+      if (!this.closedByUs) {
+        this.scheduleReconnect();
+      }
       throw err;
     } finally {
       this.connecting = null;
     }
   }
 
+  private scheduleReconnect() {
+    if (this.closedByUs || this.reconnectTimer) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.reconnectDelay = Math.min(
+        this.reconnectDelay * 1.5,
+        MAX_RECONNECT_DELAY_MS,
+      );
+      void this.connect().catch(() => {
+        // Reconnect will re-schedule itself on failure
+      });
+    }, this.reconnectDelay);
+  }
+
   private handleFrame(raw: string) {
-    // Frames arrive newline-delimited; a single message may batch several.
     for (const line of raw.split("\n")) {
       const trimmed = line.trim();
       if (!trimmed) continue;
@@ -176,7 +204,6 @@ export class LunaClient {
     });
   }
 
-  /** Fire-and-forget notification (no response expected). */
   notify(method: string, params: Record<string, unknown> = {}) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ jsonrpc: "2.0", method, params }));
@@ -185,6 +212,10 @@ export class LunaClient {
 
   disconnect() {
     this.closedByUs = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
   }

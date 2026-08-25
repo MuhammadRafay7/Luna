@@ -205,3 +205,46 @@ body {
   text-align: left;
 }
 .luna-prose th { background: var(--bg-sunken); font-weight: 600; }
+
+/* Slow rotating ring around the voice orb. */
+@keyframes luna-orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.luna-orbit {
+  animation: luna-orbit-spin 9s linear infinite;
+  border-style: dashed !important;
+}
+
+/* Message entrance — subtle, only on first paint of a row. */
+@keyframes luna-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.luna-rise { animation: luna-rise 0.22s ease-out both; }
+
+/* Soft aurora wash behind the app shell. Purely decorative. */
+.luna-aurora::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 30rem at 12% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
+    radial-gradient(48rem 26rem at 108% 8%, color-mix(in srgb, var(--tool) 9%, transparent), transparent 72%);
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luna-orbit, .luna-dot, .luna-caret::after, .luna-rise {
+    animation: none !important;
+  }
+}
+
+/* Composer lifts and picks up the accent when anything inside it is focused. */
+.luna-composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong)) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+    var(--shadow) !important;
+}

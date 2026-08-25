@@ -1,0 +1,33 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="luna-icon-p" x1="3" y1="3" x2="29" y2="29" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#93c5fd" />
+      <stop offset="28%" stop-color="#818cf8" />
+      <stop offset="65%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="luna-icon-s" x1="8" y1="8" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e0e7ff" />
+      <stop offset="50%" stop-color="#a5b4fc" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <radialGradient id="luna-icon-c" cx="16" cy="16" r="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#e0e7ff" stop-opacity="0.95" />
+      <stop offset="70%" stop-color="#818cf8" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#4338ca" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Diagonal Secondary 4-Point Spark -->
+  <path d="M16 6.5C16 11.5 20.5 16 25.5 16C20.5 16 16 20.5 16 25.5C16 20.5 11.5 16 6.5 16C11.5 16 16 11.5 16 6.5Z" fill="url(#luna-icon-s)" opacity="0.55" transform="rotate(45 16 16)" />
+
+  <!-- Primary 4-Point Radiant Starburst -->
+  <path d="M16 2C16 9.5 22.5 16 30 16C22.5 16 16 22.5 16 30C16 22.5 9.5 16 2 16C9.5 16 16 9.5 16 2Z" fill="url(#luna-icon-p)" />
+
+  <!-- Radiant Core Glow -->
+  <circle cx="16" cy="16" r="5.5" fill="url(#luna-icon-c)" />
+
+  <!-- Pinpoint Center -->
+  <circle cx="16" cy="16" r="1.4" fill="#ffffff" />
+</svg>
