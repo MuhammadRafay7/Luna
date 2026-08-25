@@ -1,0 +1,59 @@
+name: luna
+
+services:
+  luna:
+    image: nousresearch/hermes-agent:${HERMES_VERSION:-v2026.8.19}
+    container_name: luna
+    restart: unless-stopped
+
+    env_file: [.env]
+
+    # Without a TTY the interactive `hermes` service sees fd=0 is not a terminal,
+    # exits 0, and s6 tears down the whole container (taking the dashboard with
+    # it). These two keep it alive when running detached.
+    stdin_open: true
+    tty: true
+
+    ports:
+      - "127.0.0.1:${DASHBOARD_PORT:-9119}:9119"   # management dashboard
+      - "127.0.0.1:${API_PORT:-8642}:8642"         # OpenAI-compatible API
+
+    volumes:
+      # All state lives INSIDE this repo directory — nothing scattered on the host.
+      - ./data:/opt/data
+      - ./workspace:/workspace
+      - ./captures:/captures
+      # Voice: PipeWire socket. HOST_RUNTIME_DIR is auto-detected by ./setup.sh
+      - ${HOST_RUNTIME_DIR:-/run/user/1000}/pipewire-0:/run/user/${HOST_UID:-1000}/pipewire-0
+      # /var/run/docker.sock is deliberately ABSENT — mounting it = host root.
+
+    devices:
+      - "${CAMERA_DEVICE:-/dev/video0}:/dev/video0"
+      - "/dev/snd:/dev/snd"
+
+    environment:
+      - XDG_RUNTIME_DIR=/run/user/${HOST_UID:-1000}
+      - PULSE_SERVER=unix:/run/user/${HOST_UID:-1000}/pipewire-0
+
+    # NOTE: no-new-privileges is INCOMPATIBLE with this image — s6-overlay uses
+    # setuid helpers to drop from root to HERMES_UID; the flag makes exec fail
+    # with EPERM and the container restart-loops. Verified by bisect.
+    cap_drop:
+      - ALL
+    cap_add:                      # minimum for s6-overlay + privilege drop
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+      - FOWNER
+      - KILL
+
+    mem_limit: ${MEM_LIMIT:-2g}
+    memswap_limit: ${MEMSWAP_LIMIT:-3g}
+    cpus: ${CPUS:-2.0}
+
+    networks: [luna-net]
+
+networks:
+  luna-net:
+    name: luna-net
