@@ -10,6 +10,7 @@ import {
   X,
   Radio,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import {
   speechRecognitionCtor,
@@ -17,7 +18,13 @@ import {
   type SpeechRecognitionLike,
 } from "@/lib/use-speech";
 import { useVAD } from "@/lib/use-vad";
-import { stripActions } from "@/lib/actions";
+import { openPendingTab } from "@/lib/open-tab";
+import {
+  parseActions,
+  resolveActionUrl,
+  stripActions,
+  type LunaAction,
+} from "@/lib/actions";
 import { LunaLogo } from "./LunaLogo";
 
 type Phase = "listening" | "committing" | "thinking" | "speaking" | "paused";
@@ -82,6 +89,8 @@ export function VoiceMode({
   const recogRef = useRef<SpeechRecognitionLike | null>(null);
   const phaseRef = useRef<Phase>("listening");
   const spokenRef = useRef<string | null>(null);
+  // An action Luna requested that the browser refused to auto-open.
+  const [pendingAction, setPendingAction] = useState<LunaAction | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const smoothedBarsRef = useRef<number[]>(new Array(36).fill(0));
 
@@ -224,8 +233,28 @@ export function VoiceMode({
       { role: "luna", text: cleanSpoken, id: `luna-${replyId}` },
     ]);
 
+    const { actions } = parseActions(replyText);
+
     void (async () => {
       await speak(cleanSpoken);
+
+      // Hands-free: try to open what she asked for. Popup blockers reject
+      // window.open outside a user gesture, and speaking has taken us well
+      // past ours — so when it's refused, surface a button to tap instead.
+      if (actions.length > 0) {
+        const action = actions[0];
+        try {
+          const url = await resolveActionUrl(action);
+          // No user gesture is in scope here (speech has long finished), so a
+          // blocker may refuse. openPendingTab reports that honestly.
+          const pending = openPendingTab();
+          if (pending.ok) pending.settle(url);
+          else setPendingAction(action);
+        } catch {
+          setPendingAction(action);
+        }
+      }
+
       if (phaseRef.current === "speaking") {
         startListening();
       }
@@ -359,7 +388,7 @@ export function VoiceMode({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-between px-6 py-8 backdrop-blur-2xl"
+      className="luna-aurora fixed inset-0 z-50 flex flex-col items-center justify-between px-6 py-8 backdrop-blur-2xl"
       style={{
         background:
           "radial-gradient(ellipse at 50% 30%, var(--bg-raised), var(--bg))",
@@ -432,13 +461,41 @@ export function VoiceMode({
           </div>
         )}
 
-        {/* Live Audio Waveform Canvas */}
-        <div className="relative my-4 flex h-32 w-full items-center justify-center">
+        {/* Live Audio Waveform, seated in a breathing brand halo */}
+        <div className="relative my-6 flex h-56 w-full items-center justify-center">
+          {/* Soft field of light — scales with the phase, not the frame rate. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute rounded-full transition-all duration-500"
+            style={{
+              width: 340,
+              height: 340,
+              background: "var(--grad-soft)",
+              filter: "blur(46px)",
+              opacity: phase === "paused" ? 0.25 : phase === "speaking" ? 0.95 : 0.6,
+              transform: `scale(${phase === "speaking" ? 1.12 : 1})`,
+            }}
+          />
+
+          {/* Containing ring — dashed and turning only while she works. */}
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute rounded-full ${
+              phase === "thinking" || phase === "speaking" ? "luna-orbit" : ""
+            }`}
+            style={{
+              width: 260,
+              height: 260,
+              border: "1px solid var(--accent)",
+              opacity: phase === "paused" ? 0.1 : 0.28,
+            }}
+          />
+
           <canvas
             ref={canvasRef}
             width={380}
             height={120}
-            className="rounded-2xl"
+            className="relative z-10 w-full max-w-sm"
           />
         </div>
 
@@ -466,14 +523,56 @@ export function VoiceMode({
         </div>
 
         {vad.error && (
-          <p
-            className="mt-3 text-center text-xs font-medium"
-            style={{ color: "var(--danger)" }}
+          <div
+            className="luna-glass mt-4 max-w-md rounded-2xl px-4 py-3 text-center"
+            style={{ borderColor: "var(--danger)" }}
           >
-            {vad.error}
-          </p>
+            <p className="text-sm font-semibold" style={{ color: "var(--danger)" }}>
+              {/permission|denied|not-allowed/i.test(vad.error)
+                ? "Luna can't hear you"
+                : "Microphone problem"}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+              {/permission|denied|not-allowed/i.test(vad.error) ? (
+                <>
+                  Microphone access is blocked for this page. Click the crossed-out
+                  mic in the address bar, choose <strong>Allow</strong>, then reload.
+                </>
+              ) : (
+                vad.error
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="luna-pill mt-2.5 px-4 py-1.5 text-xs font-semibold"
+              style={{ background: "var(--grad-brand)", color: "var(--accent-text)" }}
+            >
+              Reload
+            </button>
+          </div>
         )}
       </div>
+
+      {pendingAction && (
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const url = await resolveActionUrl(pendingAction);
+              window.open(url, "_blank", "noopener,noreferrer");
+              setPendingAction(null);
+            } catch {
+              setPendingAction(null);
+            }
+          }}
+          className="mb-4 flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-transform hover:-translate-y-0.5"
+          style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+        >
+          <ExternalLink className="size-4" />
+          {pendingAction.type === "play" ? "Play" : "Open"} {pendingAction.label}
+        </button>
+      )}
 
       {/* Bottom controls */}
       <div className="flex flex-col items-center gap-3">

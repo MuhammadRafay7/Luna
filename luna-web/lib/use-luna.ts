@@ -6,7 +6,14 @@ import {
   type ConnectionStatus,
   type LunaEvent,
 } from "./luna-client";
-import type { Message, SessionSummary, ToolCall, Usage } from "./types";
+import type {
+  ApprovalRequest,
+  CronJob,
+  Message,
+  SessionSummary,
+  ToolCall,
+  Usage,
+} from "./types";
 
 /** Delta frames carry their text under one of a few keys depending on source. */
 function deltaText(payload: Record<string, unknown>): string {
@@ -31,6 +38,8 @@ function toUsage(raw: unknown): Usage | undefined {
   };
 }
 
+const LAST_SESSION_KEY = "luna-last-session";
+
 let uid = 0;
 const nextId = () => `m${++uid}`;
 
@@ -45,6 +54,10 @@ export function useLuna() {
   const [busy, setBusy] = useState(false);
   const [statusLine, setStatusLine] = useState<string>("");
   const [fatal, setFatal] = useState<string | null>(null);
+  const [approval, setApproval] = useState<ApprovalRequest | null>(null);
+  // Mirrored into a ref so respondApproval can read it without re-binding.
+  const approvalRef = useRef<ApprovalRequest | null>(null);
+  approvalRef.current = approval;
 
   // The assistant message currently being streamed into.
   const activeRef = useRef<string | null>(null);
@@ -203,6 +216,26 @@ export function useLuna() {
           );
           break;
         }
+
+        case "approval.request": {
+          // A guard stopped a dangerous command; the agent thread is parked
+          // until we answer, so this must always reach the user.
+          const choices = Array.isArray(p.choices)
+            ? (p.choices as string[])
+            : ["once", "deny"];
+          setApproval({
+            requestId: typeof p.request_id === "string" ? p.request_id : undefined,
+            command: String(p.command ?? p.action ?? "this action"),
+            rule: typeof p.rule === "string" ? p.rule : undefined,
+            detail: typeof p.detail === "string" ? p.detail : undefined,
+            choices,
+          });
+          break;
+        }
+
+        case "approval.received":
+          setApproval(null);
+          break;
 
         case "sessions.changed":
           if (sessionsChangedDebounceTimer.current) {
@@ -367,6 +400,48 @@ export function useLuna() {
     [busy, client, sessionId],
   );
 
+  /** Providers and their models, plus whichever is currently selected. */
+  const listModels = useCallback(async () => {
+    const res = await client.rpc<{
+      providers?: Array<{
+        slug: string;
+        name: string;
+        models?: string[];
+        authenticated?: boolean;
+        total_models?: number;
+      }>;
+      model?: string;
+    }>("model.options", sessionId ? { session_id: sessionId } : {});
+    return {
+      current: res.model ?? "",
+      providers: (res.providers ?? [])
+        .filter((p) => p.authenticated !== false)
+        .map((p) => ({
+          slug: p.slug,
+          name: p.name || p.slug,
+          models: p.models ?? [],
+        })),
+    };
+  }, [client, sessionId]);
+
+  /**
+   * Switches the default model. This writes config, so it applies to new
+   * turns — the session already in flight keeps whatever it started with.
+   */
+  const setModel = useCallback(async (model: string) => {
+    const res = await fetch("/api/luna/model", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
+    if (!res.ok) {
+      const { error } = (await res.json().catch(() => ({ error: "" }))) as {
+        error?: string;
+      };
+      throw new Error(error || "Could not switch model.");
+    }
+  }, []);
+
   /** Upload an image into the session; the next prompt.submit picks it up. */
   const attachImage = useCallback(
     async (dataUrl: string) => {
@@ -378,6 +453,67 @@ export function useLuna() {
       });
     },
     [client, sessionId],
+  );
+
+  /** Answer a pending approval. Denying is always safe to default to. */
+  const respondApproval = useCallback(
+    async (choice: string) => {
+      const pending = approvalRef.current;
+      setApproval(null);
+      if (!sessionId) return;
+      await client.rpc("approval.respond", {
+        session_id: sessionId,
+        choice,
+        request_id: pending?.requestId,
+      });
+    },
+    [client, sessionId],
+  );
+
+  /* ---- Scheduling ------------------------------------------------------ */
+
+  const listCrons = useCallback(async (): Promise<CronJob[]> => {
+    const res = await client.rpc<{ jobs?: unknown[] }>("cron.manage", {
+      action: "list",
+      include_disabled: true,
+    });
+    return (res.jobs ?? []).map((raw) => {
+      const j = raw as Record<string, unknown>;
+      return {
+        id: String(j.job_id ?? j.name ?? ""),
+        name: String(j.name ?? "untitled"),
+        prompt: String(j.prompt_preview ?? ""),
+        schedule: String(j.schedule ?? ""),
+        nextRunAt: typeof j.next_run_at === "string" ? j.next_run_at : undefined,
+        lastRunAt: typeof j.last_run_at === "string" ? j.last_run_at : undefined,
+        lastStatus: typeof j.last_status === "string" ? j.last_status : undefined,
+        enabled: j.enabled !== false,
+      } satisfies CronJob;
+    });
+  }, [client]);
+
+  const addCron = useCallback(
+    async (name: string, schedule: string, prompt: string) => {
+      await client.rpc("cron.manage", { action: "add", name, schedule, prompt });
+    },
+    [client],
+  );
+
+  const removeCron = useCallback(
+    async (name: string) => {
+      await client.rpc("cron.manage", { action: "remove", name });
+    },
+    [client],
+  );
+
+  const setCronEnabled = useCallback(
+    async (name: string, enabled: boolean) => {
+      await client.rpc("cron.manage", {
+        action: enabled ? "resume" : "pause",
+        name,
+      });
+    },
+    [client],
   );
 
   const interrupt = useCallback(async () => {
@@ -395,6 +531,13 @@ export function useLuna() {
     async (stored: string) => {
       try {
         await client.rpc("session.delete", { session_id: stored });
+        try {
+          if (localStorage.getItem(LAST_SESSION_KEY) === stored) {
+            localStorage.removeItem(LAST_SESSION_KEY);
+          }
+        } catch {
+          // Non-fatal.
+        }
         if (stored === storedId) await newChat();
         void refreshSessions();
       } catch {
@@ -404,6 +547,20 @@ export function useLuna() {
     [client, newChat, refreshSessions, storedId],
   );
 
+  // Persist which conversation is open so a refresh returns to it.
+  //
+  // Only ever writes. On the first render storedId is still null, and this
+  // effect runs *before* the mount effect below — clearing the key here would
+  // wipe the very value the restore is about to read.
+  useEffect(() => {
+    if (!storedId) return;
+    try {
+      localStorage.setItem(LAST_SESSION_KEY, storedId);
+    } catch {
+      // Non-fatal: refresh just won't restore.
+    }
+  }, [storedId]);
+
   // Connect once on mount.
   useEffect(() => {
     let cancelled = false;
@@ -412,7 +569,20 @@ export function useLuna() {
         await client.connect();
         if (cancelled) return;
         await refreshSessions();
-        await newChat();
+
+        // Restore the conversation the tab was last in. Refreshing mid-chat
+        // used to silently start a new session and orphan the thread.
+        let restored = false;
+        try {
+          const last = localStorage.getItem(LAST_SESSION_KEY);
+          if (last) {
+            await openSession(last);
+            restored = true;
+          }
+        } catch {
+          // Blocked storage, or the session was deleted server-side.
+        }
+        if (!cancelled && !restored) await newChat();
       } catch (err) {
         if (!cancelled) {
           setFatal(
@@ -435,8 +605,16 @@ export function useLuna() {
     messages,
     busy,
     statusLine,
+    approval,
+    respondApproval,
     send,
     attachImage,
+    listModels,
+    listCrons,
+    addCron,
+    removeCron,
+    setCronEnabled,
+    setModel,
     interrupt,
     newChat,
     openSession,
