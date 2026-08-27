@@ -23,7 +23,7 @@ export function LunaLogo({ size = 28, className = "", glow = false }: Props) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 transition-transform duration-300 ${
-        glow ? "drop-shadow-[0_0_16px_rgba(129,140,248,0.7)]" : ""
+        glow ? "drop-shadow-[0_0_18px_rgba(155,140,255,0.55)]" : ""
       } ${className}`}
     >
       <defs>
@@ -36,10 +36,10 @@ export function LunaLogo({ size = 28, className = "", glow = false }: Props) {
           y2="29"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#93c5fd" />
-          <stop offset="28%" stopColor="#818cf8" />
-          <stop offset="65%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#4338ca" />
+          <stop offset="0%" stopColor="#c9c0ff" />
+          <stop offset="34%" stopColor="#9b8cff" />
+          <stop offset="68%" stopColor="#8579f2" />
+          <stop offset="100%" stopColor="#6b5bd6" />
         </linearGradient>
 
         {/* Diagonal Secondary Ray Gradient */}
@@ -51,9 +51,9 @@ export function LunaLogo({ size = 28, className = "", glow = false }: Props) {
           y2="24"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#e0e7ff" />
-          <stop offset="50%" stopColor="#a5b4fc" />
-          <stop offset="100%" stopColor="#6366f1" />
+          <stop offset="0%" stopColor="#f2efff" />
+          <stop offset="50%" stopColor="#b3a6ff" />
+          <stop offset="100%" stopColor="#8579f2" />
         </linearGradient>
 
         {/* Center Radiant Core Glow */}
@@ -65,9 +65,9 @@ export function LunaLogo({ size = 28, className = "", glow = false }: Props) {
           gradientUnits="userSpaceOnUse"
         >
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="35%" stopColor="#e0e7ff" stopOpacity="0.95" />
-          <stop offset="70%" stopColor="#818cf8" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#4338ca" stopOpacity="0" />
+          <stop offset="35%" stopColor="#f2efff" stopOpacity="0.95" />
+          <stop offset="70%" stopColor="#9b8cff" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#6b5bd6" stopOpacity="0" />
         </radialGradient>
 
         {/* Specular Core Flare */}
@@ -165,20 +165,23 @@ export function LunaHeroLogo({
   size?: number;
   className?: string;
 }) {
+  // No container — the mark sits directly on the page, lit by its own halo.
   return (
     <div
-      className={`relative grid place-items-center rounded-3xl p-3.5 shadow-2xl transition-all duration-300 hover:scale-105 ${className}`}
-      style={{
-        width: size,
-        height: size,
-        background:
-          "linear-gradient(145deg, var(--bg-raised), var(--bg-sunken))",
-        border: "1px solid var(--border-strong)",
-        boxShadow:
-          "0 20px 45px -15px rgba(99, 102, 241, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25)",
-      }}
+      className={`relative grid place-items-center transition-transform duration-300 hover:scale-105 ${className}`}
+      style={{ width: size, height: size }}
     >
-      <LunaLogo size={size * 0.78} glow />
+      <div
+        aria-hidden
+        className="luna-breathe pointer-events-none absolute rounded-full"
+        style={{
+          width: size * 1.9,
+          height: size * 1.9,
+          background: "var(--grad-soft)",
+          filter: `blur(${Math.round(size * 0.42)}px)`,
+        }}
+      />
+      <LunaLogo size={size} glow className="relative" />
     </div>
   );
 }

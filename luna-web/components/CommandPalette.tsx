@@ -152,19 +152,17 @@ export function CommandPalette({
         aria-modal="true"
         aria-label="Command palette"
         onClick={(e) => e.stopPropagation()}
-        className="luna-rise w-full max-w-xl overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-2xl"
+        className="luna-rise luna-glass-strong luna-edge-lit w-full max-w-xl overflow-hidden rounded-3xl"
         style={{
-          background: "var(--bg-raised)",
-          borderColor: "var(--border-strong)",
-          boxShadow: "0 24px 60px -12px rgb(0 0 0 / 0.35)",
+          boxShadow: "0 30px 80px -20px rgb(0 0 0 / 0.65)",
         }}
       >
         {/* Search header */}
         <div
           className="flex items-center gap-3 border-b px-4 py-3.5"
-          style={{ borderColor: "var(--border)" }}
+          style={{ borderColor: "color-mix(in srgb, var(--border) 70%, transparent)" }}
         >
-          <Search className="size-4.5 shrink-0 opacity-50" />
+          <Search className="size-4.5 shrink-0" style={{ color: "var(--accent)" }} />
           <input
             ref={inputRef}
             type="text"
@@ -201,17 +199,18 @@ export function CommandPalette({
                       type="button"
                       onClick={item.run}
                       onMouseEnter={() => setSelectedIndex(idx)}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors"
-                      style={{
-                        background: isSelected ? "var(--bg-hover)" : "transparent",
-                        color: "var(--text)",
-                      }}
+                      className={`luna-pill flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm ${
+                        isSelected ? "luna-pill-active" : ""
+                      }`}
+                      style={{ color: "var(--text)" }}
                     >
                       <div
-                        className="flex size-7 items-center justify-center rounded-lg"
+                        className="flex size-7 items-center justify-center rounded-full transition-colors"
                         style={{
-                          background: isSelected ? "var(--accent-soft)" : "var(--bg-sunken)",
-                          color: isSelected ? "var(--accent)" : "var(--text-muted)",
+                          background: isSelected
+                            ? "var(--grad-brand)"
+                            : "color-mix(in srgb, var(--bg-hover) 80%, transparent)",
+                          color: isSelected ? "var(--accent-text)" : "var(--text-muted)",
                         }}
                       >
                         {item.icon}

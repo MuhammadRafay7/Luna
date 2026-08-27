@@ -1,4 +1,4 @@
-.PHONY: setup up down restart logs chat shell dash config status clean web web-install web-build
+.PHONY: setup up down restart logs chat shell dash config status clean web web-install web-build bar
 setup:    ; ./setup.sh
 up:       ; docker compose up -d
 down:     ; docker compose down
@@ -15,3 +15,4 @@ clean:    ; docker compose down -v
 web-install: ; cd luna-web && pnpm install
 web-build:   ; cd luna-web && pnpm build
 web:         ; @echo "Luna UI -> http://127.0.0.1:3210" && cd luna-web && pnpm dev
+bar:         ; @./desktop/install-bar.sh

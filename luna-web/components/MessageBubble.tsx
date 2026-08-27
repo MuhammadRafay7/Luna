@@ -7,10 +7,12 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Wrench,
   Sparkles,
 } from "lucide-react";
 import type { Message } from "@/lib/types";
-import { parseActions } from "@/lib/actions";
+import { parseActions, type LunaAction } from "@/lib/actions";
+import { extractLinks } from "@/lib/intents";
 import { showToast } from "@/lib/use-toast";
 import { Markdown } from "./Markdown";
 import { ToolCard } from "./ToolCard";
@@ -24,11 +26,33 @@ function LunaMark() {
 export function MessageBubble({ message }: { message: Message }) {
   const [showReasoning, setShowReasoning] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showTools, setShowTools] = useState(false);
 
   const { actions, cleanText } = useMemo(
     () => parseActions(message.text),
     [message.text],
   );
+
+  // When she answers with a bare link instead of an action block — which a
+  // lite model often does — surface it as a chip anyway so it stays one click.
+  const linkActions = useMemo<LunaAction[]>(() => {
+    if (message.role !== "assistant" || actions.length > 0) return [];
+    return extractLinks(cleanText).map((url) => ({
+      type: "open_url" as const,
+      url,
+      label: (() => {
+        try {
+          return new URL(url).hostname.replace(/^www\./, "");
+        } catch {
+          return "link";
+        }
+      })(),
+    }));
+  }, [actions.length, cleanText, message.role]);
+
+  const allActions = actions.length > 0 ? actions : linkActions;
+
+  const toolSeconds = message.tools.reduce((sum, t) => sum + (t.durationS ?? 0), 0);
 
   const copyToClipboard = async () => {
     try {
@@ -89,7 +113,7 @@ export function MessageBubble({ message }: { message: Message }) {
               className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
               style={{ color: "var(--text-muted)" }}
             >
-              <Brain className="size-3.5 text-amber-500" />
+              <Brain className="size-3.5" style={{ color: "var(--accent-2)" }} />
               <span>Thinking process</span>
               {showReasoning ? (
                 <ChevronDown className="size-3" />
@@ -113,18 +137,40 @@ export function MessageBubble({ message }: { message: Message }) {
         )}
 
         {/* Executed Tools */}
+        {/* Tool activity is collapsed to a single line once the turn is done —
+            what she did is available, but it isn't the answer. While she's
+            still working it stays open so you can watch progress. */}
         {message.tools.length > 0 && (
           <div className="space-y-1.5">
-            {message.tools.map((t) => (
-              <ToolCard key={t.id} tool={t} />
-            ))}
+            {(showTools || message.streaming) &&
+              message.tools.map((t) => <ToolCard key={t.id} tool={t} />)}
+
+            {!message.streaming && (
+              <button
+                type="button"
+                onClick={() => setShowTools((v) => !v)}
+                className="flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+                style={{ color: "var(--text-faint)" }}
+              >
+                {showTools ? (
+                  <ChevronDown className="size-3" />
+                ) : (
+                  <ChevronRight className="size-3" />
+                )}
+                <Wrench className="size-3" />
+                {message.tools.length === 1
+                  ? "Used 1 tool"
+                  : `Used ${message.tools.length} tools`}
+                {toolSeconds > 0 && ` · ${toolSeconds.toFixed(1)}s`}
+              </button>
+            )}
           </div>
         )}
 
         {/* Action Chips */}
-        {actions.length > 0 && (
+        {allActions.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1 pb-1">
-            {actions.map((act, i) => (
+            {allActions.map((act, i) => (
               <ActionChip key={i} action={act} />
             ))}
           </div>
@@ -143,10 +189,18 @@ export function MessageBubble({ message }: { message: Message }) {
 
         {/* Streaming Skeleton Dots */}
         {empty && message.streaming && (
-          <div className="flex items-center gap-1.5 py-1" aria-label="Luna is thinking">
-            <Sparkles className="size-3.5 animate-spin text-amber-500" />
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Luna is thinking…
+          <div
+            className="flex items-center gap-2.5 py-1.5"
+            role="status"
+            aria-label="Luna is thinking"
+          >
+            <span className="luna-think" aria-hidden>
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="luna-thinking-label text-xs font-medium">
+              Thinking…
             </span>
           </div>
         )}

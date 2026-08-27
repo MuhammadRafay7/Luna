@@ -92,7 +92,7 @@ export function CameraCapture({
           style={{ borderColor: "var(--border)" }}
         >
           <div className="flex items-center gap-2 text-xs font-semibold">
-            <Camera className="size-4 text-amber-500" />
+            <Camera className="size-4" style={{ color: "var(--accent)" }} />
             <span>Take a Photo</span>
           </div>
           <button

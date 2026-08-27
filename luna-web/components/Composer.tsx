@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { CameraCapture } from "./CameraCapture";
+import { ModelPicker } from "./ModelPicker";
 
 type Props = {
   busy: boolean;
@@ -20,6 +21,11 @@ type Props = {
   onInterrupt: () => void;
   onAttachImage: (dataUrl: string) => Promise<void>;
   onVoiceMode: () => void;
+  listModels: () => Promise<{
+    current: string;
+    providers: { slug: string; name: string; models: string[] }[];
+  }>;
+  setModel: (model: string) => Promise<void>;
 };
 
 /** Minimal typing for the vendor-prefixed Web Speech API. */
@@ -42,6 +48,8 @@ export function Composer({
   onInterrupt,
   onAttachImage,
   onVoiceMode,
+  listModels,
+  setModel,
 }: Props) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -156,11 +164,12 @@ export function Composer({
         )}
 
         <div
-          className="luna-composer rounded-2xl border transition-all"
+          className="luna-composer luna-glass-strong luna-edge-lit rounded-[26px] transition-all"
           style={{
-            borderColor: "var(--border-strong)",
-            background: "var(--bg-raised)",
-            boxShadow: "var(--shadow)",
+            // Lifted well clear of the page so it reads as a floating control
+            // rather than a panel painted onto the background.
+            boxShadow:
+              "0 18px 50px -20px rgb(0 0 0 / 0.55), 0 2px 8px -3px rgb(0 0 0 / 0.3)",
           }}
         >
           {images.length > 0 && (
@@ -255,6 +264,10 @@ export function Composer({
               </>
             )}
 
+            <div className="mx-1 h-4 w-px" style={{ background: "var(--border)" }} />
+
+            <ModelPicker listModels={listModels} setModel={setModel} />
+
             <div className="ml-auto">
               {busy ? (
                 <button
@@ -272,7 +285,11 @@ export function Composer({
                   onClick={submit}
                   disabled={!text.trim() || disabled}
                   className="flex size-8 items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-30"
-                  style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+                  style={{
+                    background: "var(--grad-brand)",
+                    color: "var(--accent-text)",
+                    boxShadow: "var(--glow)",
+                  }}
                   aria-label="Send message"
                 >
                   <ArrowUp className="size-4" />
