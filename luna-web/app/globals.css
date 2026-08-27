@@ -1,9 +1,13 @@
 @import "tailwindcss";
 
 /*
-  Luna's palette. Night-sky darks, warm ivory lights, a pale lunar accent.
-  Light is the base definition; dark overrides only what changes, so a
-  missing token can never fall through to an undefined color.
+  Luna — a futuristic glass interface.
+
+  Dark is the primary world: deep space ground, translucent glass panels,
+  cyan signal light with a violet counterpoint. Light is a genuine daylight
+  translation, not an inversion — glass there is frosted white rather than
+  smoked. Light is the base definition; dark and the explicit toggle each
+  redefine only tokens, so nothing can fall through undefined.
 */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -11,86 +15,146 @@
 }
 
 :root {
-  --bg: #faf9f7;
+  --bg: #f6f6f8;
   --bg-raised: #ffffff;
-  --bg-sunken: #f2f0ec;
-  --bg-hover: #ebe8e3;
+  --bg-sunken: #edecf0;
+  --bg-hover: #e3e2e8;
 
-  --text: #23211e;
-  --text-muted: #6b6660;
-  --text-faint: #9a948c;
+  --text: #16161a;
+  --text-muted: #5a5a66;
+  --text-faint: #8e8e9c;
 
-  --border: #e2ded8;
-  --border-strong: #cfc9c1;
+  --border: #dcdbe2;
+  --border-strong: #c3c2cd;
 
-  --accent: #5b6ee1;
-  --accent-hover: #4a5cd0;
-  --accent-soft: #eceefb;
+  /* One accent hue, full stop. Everything else is neutral, so the violet is
+     always the thing your eye goes to. --accent-2 is a *tone* of the same
+     hue, not a second colour — the gradient stays within one family. */
+  /* Violet drawn through crimson — a lunar eclipse. Violet leads; the red is
+     the closing note, never the dominant one. Semantic red (--danger) is a
+     separate, warmer hue so an error can't be confused with brand colour. */
+  --accent: #6b5bd6;
+  --accent-hover: #5847c4;
+  --accent-soft: #eceafa;
   --accent-text: #ffffff;
+  --accent-2: #c93f66;
+  --accent-3: #8b7ce8;
 
-  --tool: #b47818;
-  --tool-soft: #fdf4e3;
-  --danger: #c4453d;
-  --ok: #3f8f5f;
+  --grad-brand: linear-gradient(118deg, #6b5bd6 0%, #9455bd 55%, #c93f66 100%);
+  --grad-soft: linear-gradient(118deg,
+    color-mix(in srgb, #6b5bd6 12%, transparent),
+    color-mix(in srgb, #c93f66 8%, transparent));
 
-  --bubble-user: #eceefb;
-  --shadow: 0 1px 2px rgb(35 33 30 / 0.05), 0 4px 12px rgb(35 33 30 / 0.04);
+  --chat-bg: #f1f0f5;
+
+  --tool: #a06a12;
+  --tool-soft: #f8eeda;
+  --danger: #d1552e;
+  --ok: #2f8256;
+
+  --bubble-user: #d9ecf3;
+
+  /* Glass */
+  --glass: rgb(255 255 255 / 0.62);
+  --glass-strong: rgb(255 255 255 / 0.8);
+  --glass-border: rgb(255 255 255 / 0.9);
+  --glass-edge: rgb(13 24 38 / 0.08);
+  --blur: 18px;
+
+  --glow: 0 0 26px -6px rgb(107 91 214 / 0.38);
+  --shadow: 0 1px 2px rgb(13 24 38 / 0.06), 0 8px 28px -10px rgb(13 24 38 / 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #16171c;
-    --bg-raised: #1d1f26;
-    --bg-sunken: #121317;
-    --bg-hover: #272a33;
+    --bg: #0b0b0f;
+    --bg-raised: #16161c;
+    --bg-sunken: #070709;
+    --bg-hover: #212129;
 
-    --text: #e8e6e3;
-    --text-muted: #9d9a95;
-    --text-faint: #6e6b67;
+    --text: #ececf0;
+    --text-muted: #9b9baa;
+    --text-faint: #6a6a78;
 
-    --border: #2b2e37;
-    --border-strong: #3a3e49;
+    --border: #24242c;
+    --border-strong: #35353f;
 
-    --accent: #8b9bf0;
-    --accent-hover: #a0adf4;
-    --accent-soft: #232637;
-    --accent-text: #16171c;
+    --accent: #9b8cff;
+    --accent-hover: #b3a6ff;
+    --accent-soft: #1d1b2b;
+    --accent-text: #0b0b0f;
+    --accent-2: #f2557f;
+    --accent-3: #7d6ef0;
 
-    --tool: #e0a94a;
-    --tool-soft: #2a2418;
-    --danger: #e57373;
-    --ok: #6cc08b;
+    --grad-brand: linear-gradient(118deg, #9b8cff 0%, #c76bc0 55%, #f2557f 100%);
+    --grad-soft: linear-gradient(118deg,
+      color-mix(in srgb, #9b8cff 16%, transparent),
+      color-mix(in srgb, #f2557f 9%, transparent));
 
-    --bubble-user: #252938;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.2);
+    /* The conversation sits on its own sheet, a shade above the shell. */
+    --chat-bg: #101014;
+
+    --tool: #ffbe5c;
+    --tool-soft: #2a2113;
+    --danger: #ff7a4d;
+    --ok: #46d69b;
+
+    --bubble-user: #1e1e26;
+
+    --glass: rgb(26 26 32 / 0.66);
+    --glass-strong: rgb(30 30 37 / 0.88);
+    --glass-border: rgb(255 255 255 / 0.09);
+    --glass-edge: rgb(0 0 0 / 0.5);
+    --blur: 20px;
+
+    --glow: 0 0 30px -6px rgb(155 140 255 / 0.4);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 40px -14px rgb(0 0 0 / 0.7);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #16171c;
-  --bg-raised: #1d1f26;
-  --bg-sunken: #121317;
-  --bg-hover: #272a33;
+  --bg: #0b0b0f;
+  --bg-raised: #16161c;
+  --bg-sunken: #070709;
+  --bg-hover: #212129;
 
-  --text: #e8e6e3;
-  --text-muted: #9d9a95;
-  --text-faint: #6e6b67;
+  --text: #ececf0;
+  --text-muted: #9b9baa;
+  --text-faint: #6a6a78;
 
-  --border: #2b2e37;
-  --border-strong: #3a3e49;
+  --border: #24242c;
+  --border-strong: #35353f;
 
-  --accent: #8b9bf0;
-  --accent-hover: #a0adf4;
-  --accent-soft: #232637;
-  --accent-text: #16171c;
+  --accent: #9b8cff;
+  --accent-hover: #b3a6ff;
+  --accent-soft: #1d1b2b;
+  --accent-text: #0b0b0f;
+  --accent-2: #f2557f;
+  --accent-3: #7d6ef0;
 
-  --tool: #e0a94a;
-  --tool-soft: #2a2418;
-  --danger: #e57373;
-  --ok: #6cc08b;
+  --grad-brand: linear-gradient(118deg, #9b8cff 0%, #c76bc0 55%, #f2557f 100%);
+  --grad-soft: linear-gradient(118deg,
+    color-mix(in srgb, #9b8cff 16%, transparent),
+    color-mix(in srgb, #f2557f 9%, transparent));
 
-  --bubble-user: #252938;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(0 0 0 / 0.2);
+  /* The conversation sits on its own sheet, a shade above the shell. */
+  --chat-bg: #101014;
+
+  --tool: #ffbe5c;
+  --tool-soft: #2a2113;
+  --danger: #ff7a4d;
+  --ok: #46d69b;
+
+  --bubble-user: #1e1e26;
+
+  --glass: rgb(26 26 32 / 0.66);
+  --glass-strong: rgb(30 30 37 / 0.88);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-edge: rgb(0 0 0 / 0.5);
+  --blur: 20px;
+
+  --glow: 0 0 30px -6px rgb(155 140 255 / 0.4);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 40px -14px rgb(0 0 0 / 0.7);
 }
 
 html,
@@ -125,7 +189,6 @@ body {
   background: transparent;
 }
 
-/* Streaming caret on the in-flight assistant message. */
 @keyframes luna-blink {
   0%, 45% { opacity: 1; }
   55%, 100% { opacity: 0; }
@@ -223,28 +286,268 @@ body {
 }
 .luna-rise { animation: luna-rise 0.22s ease-out both; }
 
-/* Soft aurora wash behind the app shell. Purely decorative. */
+/* Ambient field behind the app shell: two slow-drifting light sources over a
+   faint technical grid. Decorative only — never intercepts pointer events. */
 .luna-aurora::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
   background:
-    radial-gradient(60rem 30rem at 12% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%),
-    radial-gradient(48rem 26rem at 108% 8%, color-mix(in srgb, var(--tool) 9%, transparent), transparent 72%);
-  opacity: 0.75;
+    radial-gradient(50rem 26rem at 10% -14%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 66%),
+    radial-gradient(42rem 22rem at 96% 2%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%);
+  opacity: 0.42;
+  animation: luna-drift 28s ease-in-out infinite alternate;
+}
+
+.luna-aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* A starfield rather than a grid: one fine dot matrix for texture, plus a
+     sparse scatter of brighter points at irregular offsets so the eye reads
+     stars and not a repeat. Luna is the moon — the sky is the right register. */
+  background-image:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--text) 30%, transparent) 0.6px, transparent 0.9px),
+    radial-gradient(circle at 20% 32%, color-mix(in srgb, var(--accent) 75%, transparent) 1.1px, transparent 1.6px),
+    radial-gradient(circle at 73% 14%, color-mix(in srgb, var(--text) 55%, transparent) 0.9px, transparent 1.4px),
+    radial-gradient(circle at 41% 78%, color-mix(in srgb, var(--accent-2) 60%, transparent) 1px, transparent 1.5px),
+    radial-gradient(circle at 88% 61%, color-mix(in srgb, var(--text) 45%, transparent) 0.8px, transparent 1.3px);
+  background-size:
+    26px 26px,
+    340px 340px,
+    290px 290px,
+    410px 410px,
+    370px 370px;
+  mask-image: radial-gradient(85% 75% at 50% 30%, #000 0%, transparent 100%);
+  opacity: 0.5;
+  animation: luna-twinkle 7s ease-in-out infinite alternate;
+}
+
+@keyframes luna-twinkle {
+  from { opacity: 0.36; }
+  to { opacity: 0.6; }
+}
+
+@keyframes luna-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(0, -1.5%, 0) scale(1.06); }
+}
+
+/* ---- Glass surfaces ---- */
+.luna-glass {
+  background: var(--glass);
+  backdrop-filter: blur(var(--blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 color-mix(in srgb, var(--glass-border) 70%, transparent);
+}
+
+.luna-glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(calc(var(--blur) * 1.4)) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(var(--blur) * 1.4)) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 color-mix(in srgb, var(--glass-border) 70%, transparent);
+}
+
+/* A hairline of signal light along the top edge — the "powered" cue. */
+.luna-edge-lit {
+  position: relative;
+}
+.luna-edge-lit::before {
+  content: "";
+  position: absolute;
+  inset-inline: 12%;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.7;
+}
+
+.luna-glow { box-shadow: var(--glow); }
+
+.luna-focus-ring:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--glass-border)) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent),
+    var(--glow),
+    var(--shadow) !important;
+}
+
+/* Sweep used on the voice orb and active surfaces. */
+@keyframes luna-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.luna-sweep {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--accent) 55%, transparent) 60deg,
+    transparent 140deg,
+    transparent 360deg
+  );
+  animation: luna-sweep 3.4s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .luna-orbit, .luna-dot, .luna-caret::after, .luna-rise {
+  .luna-orbit, .luna-dot, .luna-caret::after, .luna-rise,
+  .luna-sweep, .luna-aurora::before, .luna-aurora::after,
+  .luna-breathe {
     animation: none !important;
   }
 }
 
 /* Composer lifts and picks up the accent when anything inside it is focused. */
 .luna-composer:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong)) !important;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--glass-border)) !important;
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent),
+    var(--glow),
     var(--shadow) !important;
+}
+
+/* ---- Gemini-flavoured brand treatments ---- */
+
+/* Gradient headline. Only for short display text — never body copy. */
+.luna-grad-text {
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* A hairline gradient border drawn with a masked pseudo-element, so the
+   surface underneath keeps its own translucent background. */
+.luna-grad-ring {
+  position: relative;
+}
+.luna-grad-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--grad-brand);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.luna-grad-ring:hover::after,
+.luna-grad-ring:focus-within::after {
+  opacity: 0.85;
+}
+
+/* Nav pill, Gemini-style: fully rounded, soft fill, gradient bar when active. */
+.luna-pill {
+  border-radius: 999px;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+.luna-pill-active {
+  background: var(--grad-soft) !important;
+  color: var(--text) !important;
+}
+
+/* Ambient breathing used on the idle brand mark. */
+@keyframes luna-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+.luna-breathe { animation: luna-breathe 4.5s ease-in-out infinite; }
+
+/* ---- Conversation sheet ----
+   The chat column sits a shade above the shell so the thread reads as its own
+   surface rather than floating on the sidebar's background. */
+.luna-chat-surface {
+  /* Ground comes from the shell so the column never seams; this element
+     only contributes the ambient glow below. */
+  position: relative;
+}
+.luna-chat-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* A single lit corner, keyed to the brand, plus a closing red note. */
+  background:
+    radial-gradient(38rem 20rem at 50% -8%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%),
+    radial-gradient(30rem 18rem at 100% 108%, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent 72%);
+  opacity: 0.7;
+}
+
+/* Assistant replies get a hairline sheet of their own so long threads have
+   rhythm instead of running together. */
+.luna-reply {
+  background: color-mix(in srgb, var(--bg-raised) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  border-radius: 18px;
+  padding: 0.9rem 1.05rem;
+}
+
+/* ---- Thinking indicator ----
+   Three orbs travelling along a track, plus a gradient shimmer on the label.
+   Reads as work in progress rather than a spinner stuck in place. */
+@keyframes luna-think-orb {
+  0%   { transform: translateX(0) scale(0.75); opacity: 0.35; }
+  35%  { transform: translateX(9px) scale(1.15); opacity: 1; }
+  70%  { transform: translateX(18px) scale(0.75); opacity: 0.35; }
+  100% { transform: translateX(18px) scale(0.75); opacity: 0; }
+}
+.luna-think {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 10px;
+  width: 34px;
+}
+.luna-think i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--grad-brand);
+  animation: luna-think-orb 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.luna-think i:nth-child(2) { animation-delay: 0.18s; }
+.luna-think i:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes luna-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.luna-thinking-label {
+  background: linear-gradient(
+    90deg,
+    var(--text-faint) 0%,
+    var(--accent) 45%,
+    var(--text-faint) 90%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: luna-shimmer 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luna-think i, .luna-thinking-label { animation: none !important; }
+  .luna-thinking-label { color: var(--text-muted); -webkit-text-fill-color: currentColor; }
 }

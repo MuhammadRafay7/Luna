@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
   Plus,
   Sun,
   Trash2,
@@ -111,14 +111,25 @@ export function Sidebar({
         />
       )}
 
+      {/* Collapsed, the panel disappears entirely: no glass, no border, no
+          wash — just the controls floating on the same ground as the chat.
+          Expanded, it becomes a glass panel again. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r transition-all duration-200 md:static md:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col transition-all duration-200 md:static md:translate-x-0 ${
+          collapsed ? "" : "luna-glass"
+        } ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{
           width: collapsed ? 64 : 280,
-          borderColor: "var(--border)",
-          background: "var(--bg-sunken)",
+          borderRadius: 0,
+          borderInlineStart: "none",
+          borderBlock: "none",
+          borderInlineEnd: collapsed ? "none" : "1px solid var(--border)",
+          background: collapsed ? "transparent" : undefined,
+          backdropFilter: collapsed ? "none" : undefined,
+          WebkitBackdropFilter: collapsed ? "none" : undefined,
+          boxShadow: collapsed ? "none" : undefined,
+          backgroundImage: collapsed ? "none" : "var(--grad-soft)",
+          backgroundBlendMode: collapsed ? undefined : "overlay",
         }}
       >
         {/* Brand Header */}
@@ -127,13 +138,34 @@ export function Sidebar({
             collapsed ? "justify-center px-0" : "px-4"
           }`}
         >
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-xl transition-transform hover:scale-105">
+          {/* The mark is the collapse control — no separate chevron needed. */}
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="group relative flex size-8 shrink-0 items-center justify-center rounded-xl transition-transform hover:scale-110 active:scale-95"
+          >
             <LunaLogo size={26} glow />
-          </div>
+            {/* Direction hint, revealed on hover so the mark stays clean. */}
+            <span
+              className="pointer-events-none absolute -right-1 -bottom-1 flex size-3.5 items-center justify-center rounded-full opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+              style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+            >
+              {collapsed ? (
+                <ChevronRight className="size-2.5" />
+              ) : (
+                <ChevronLeft className="size-2.5" />
+              )}
+            </span>
+          </button>
 
           {!collapsed && (
             <>
-              <span className="font-semibold tracking-tight">Luna</span>
+              <span className="luna-grad-text text-[0.95rem] font-semibold tracking-tight">
+                Luna
+              </span>
               <div className="ml-auto flex items-center gap-0.5">
                 <RailButton label="Toggle theme" onClick={toggleTheme}>
                   {theme === "dark" ? (
@@ -141,13 +173,6 @@ export function Sidebar({
                   ) : (
                     <Moon className="size-3.5" />
                   )}
-                </RailButton>
-                <RailButton
-                  label="Collapse sidebar"
-                  onClick={onToggleCollapse}
-                  className="hidden md:flex"
-                >
-                  <PanelLeftClose className="size-3.5" />
                 </RailButton>
               </div>
             </>
@@ -160,25 +185,22 @@ export function Sidebar({
             type="button"
             onClick={onNew}
             title="New chat"
-            className={`flex w-full items-center gap-2.5 rounded-xl border text-xs font-semibold tracking-tight transition-all hover:shadow-xs active:scale-[0.98] ${
+            className={`flex w-full items-center gap-2.5 rounded-full text-xs font-semibold tracking-tight transition-all hover:brightness-110 active:scale-[0.98] ${
               collapsed ? "justify-center py-2.5" : "px-3.5 py-2.5"
             }`}
             style={{
-              borderColor: "var(--border-strong)",
-              background: "var(--bg-raised)",
-              color: "var(--text)",
+              background: "var(--grad-brand)",
+              color: "var(--accent-text)",
+              boxShadow: "var(--glow)",
             }}
           >
-            <Plus className="size-4 shrink-0 text-amber-500" />
+            <Plus className="size-4 shrink-0" />
             {!collapsed && <span>New chat</span>}
           </button>
         </div>
 
         {collapsed ? (
           <div className="mt-3 flex flex-1 flex-col items-center gap-1.5">
-            <RailButton label="Expand sidebar" onClick={onToggleCollapse}>
-              <PanelLeftOpen className="size-4" />
-            </RailButton>
             <RailButton label="Toggle theme" onClick={toggleTheme}>
               {theme === "dark" ? (
                 <Sun className="size-4" />
@@ -216,16 +238,17 @@ export function Sidebar({
                             <button
                               type="button"
                               onClick={() => onOpen(s.id)}
-                              className="w-full rounded-xl px-3 py-2 pr-8 text-left transition-colors"
+                              className={`luna-pill w-full px-3.5 py-2 pr-8 text-left ${
+                                active ? "luna-pill-active" : "hover:bg-[var(--bg-hover)]"
+                              }`}
                               style={{
-                                background: active ? "var(--bg-hover)" : "transparent",
                                 color: active ? "var(--text)" : "var(--text-muted)",
                               }}
                             >
                               {active && (
                                 <span
-                                  className="absolute top-2 bottom-2 left-0 w-0.5 rounded-full"
-                                  style={{ background: "var(--accent)" }}
+                                  className="absolute top-1/2 left-1 h-4 w-[3px] -translate-y-1/2 rounded-full"
+                                  style={{ background: "var(--grad-brand)" }}
                                 />
                               )}
                               <span className="block truncate text-xs font-medium">
@@ -263,8 +286,8 @@ export function Sidebar({
 
         {/* Status indicator footer */}
         <div
-          className={`flex items-center gap-2 border-t py-3 text-xs ${
-            collapsed ? "justify-center px-0" : "px-4"
+          className={`flex items-center gap-2 py-3 text-xs ${
+            collapsed ? "justify-center px-0" : "border-t px-4"
           }`}
           style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}
           title={STATUS_LABEL[status]}

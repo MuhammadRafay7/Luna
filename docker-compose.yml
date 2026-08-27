@@ -34,6 +34,10 @@ services:
     environment:
       - XDG_RUNTIME_DIR=/run/user/${HOST_UID:-1000}
       - PULSE_SERVER=unix:/run/user/${HOST_UID:-1000}/pipewire-0
+      # Extra Python packages (reportlab, openpyxl, ddgs...) are installed into
+      # ./data/lazy-packages, which is a bind mount — so they survive a
+      # container rebuild. This puts them on the interpreter's path.
+      - PYTHONPATH=/opt/data/lazy-packages
 
     # NOTE: no-new-privileges is INCOMPATIBLE with this image — s6-overlay uses
     # setuid helpers to drop from root to HERMES_UID; the flag makes exec fail
