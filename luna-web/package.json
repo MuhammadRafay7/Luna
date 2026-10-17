@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 3210",
-    "build": "next build",
-    "start": "next start -H 127.0.0.1 -p 3210"
+    "dev": "node init && next dev -H 127.0.0.1 -p 3210",
+    "build": "node init && next build",
+    "start": "node init && next start -H 127.0.0.1 -p 3210"
   },
   "dependencies": {
     "dompurify": "^3.4.14",
